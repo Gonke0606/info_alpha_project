@@ -14,5 +14,5 @@ predict_detection.py：物体検出モデルによる予測
 
 fatigue_detection_app.py：AMaGaMiのメインプログラム
 
-作成した疲労検出アプリは、サイズが大きすぎてGitHubにもUtolにも載らなかったので、GoogleDriveに載せた。
+作成した疲労検出アプリは、サイズが大きすぎてGitHubにもUtolにも載らなかったので、GoogleDriveに載せた。distディレクトリに入っているAMaGaMi.appを解凍すればおそらく利用できる
 https://drive.google.com/drive/folders/1GAxQih0I-CH2fMQoti3w8eT5JkqJP0oh?usp=sharing
