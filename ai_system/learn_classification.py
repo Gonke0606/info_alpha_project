@@ -1,9 +1,11 @@
-'''
-画像分類モデル（ResNet18）の学習
-'''
+import random
 from collections import deque
 import copy
+from typing import Callable
 from tqdm import tqdm
+import matplotlib.pyplot as plt
+from sklearn.manifold import TSNE
+
 import torch
 from torch import nn, optim
 import torch.nn.functional as F
@@ -14,13 +16,60 @@ import torchvision.transforms as T
 
 from models_classification import ResNet18
 
-DATA_ROOT = '/Users/wakabayashikengo/fatigue_detection/data_emotion/train' # データが入っているディレクトリのパス
-SAVE_PATH = '/Users/wakabayashikengo/fatigue_detection/emotion.pth' # 学習したモデルのパラメータを保存するディレクトリのパス
-test_ratio = 0.1 # データのうち検証に使う割合
+def evaluate(data_loader: Dataset, model: nn.Module,
+             loss_func: Callable):
+    model.eval()
+
+    losses = []
+    preds = []
+    for x, y in data_loader:
+        with torch.no_grad():
+            x = x.to(model.get_device())
+            y = y.to(model.get_device())
+
+            y_pred = model(x)
+
+            losses.append(loss_func(y_pred, y, reduction='none'))
+            preds.append(y_pred.argmax(dim=1) == y)
+
+    loss = torch.cat(losses).mean()
+    accuracy = torch.cat(preds).float().mean()
+
+    return loss, accuracy
+
+
+def generate_subset(dataset: Dataset, ratio: float,
+                    random_seed: int=0):
+    size = int(len(dataset) * ratio)
+
+    indices = list(range(len(dataset)))
+
+    random.seed(random_seed)
+    random.shuffle(indices)
+
+    indices1, indices2 = indices[:size], indices[size:]
+
+    return indices1, indices2
+
+
+def generate_subset_from_indices(indices_to_split: list, ratio: float,
+                                random_seed: int=0):
+    size = int(len(indices_to_split) * ratio)
+    
+    random.seed(random_seed)
+    random.shuffle(indices_to_split)
+
+    indices1, indices2 = indices_to_split[:size], indices_to_split[size:]
+    
+    return indices1, indices2
+
+DATA_ROOT = '/Users/wakabayashikengo/fatigue_detection/data_emotion/train'
+SAVE_PATH = '/Users/wakabayashikengo/fatigue_detection/emotion.pth'
+test_ratio = 0.1
 IMAGE_SIZE = 224
 
-BETAS = (0.9, 0.999) # モーメンタムの更新度合い
-WEIGHT_DECAY = 1e-5 # 荷重減衰の度合い
+BETAS = (0.9, 0.999)
+WEIGHT_DECAY = 1e-5
 
 class Config:
     def __init__(self):
@@ -39,7 +88,6 @@ class Config:
             self.device = 'cpu'
         self.num_samples = 200
 
-# データセットの平均値と標準偏差を計算する関数
 def get_dataset_statistics(dataset: Dataset):
     data = []
     for i in range(len(dataset)):
@@ -86,9 +134,9 @@ def train_eval():
     train_val_dataset = torchvision.datasets.ImageFolder(root=DATA_ROOT, transform=train_transforms)
     test_dataset = torchvision.datasets.ImageFolder(root=DATA_ROOT, transform=test_transforms)
 
-    test_indices, train_val_indices = util.generate_subset(train_val_dataset, test_ratio)
+    test_indices, train_val_indices = generate_subset(train_val_dataset, test_ratio)
     val_ratio_in_train_val = config.val_ratio / (1 - test_ratio)
-    val_indices, train_indices = util.generate_subset_from_indices(train_val_indices, val_ratio_in_train_val)
+    val_indices, train_indices = generate_subset_from_indices(train_val_indices, val_ratio_in_train_val)
 
     train_sampler = SubsetRandomSampler(train_indices)
     val_sampler = SubsetRandomSampler(val_indices)
@@ -111,7 +159,6 @@ def train_eval():
     optimizer = optim.Adam(model.parameters(), lr=config.lr, betas=BETAS, weight_decay=WEIGHT_DECAY)
     scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=[config.lr_drop], gamma=0.1)
 
-    # 学習ループ
     for epoch in range(config.num_epochs):
         model.train()
         losses = deque()
@@ -134,16 +181,17 @@ def train_eval():
                     losses.popleft(), accs.popleft()
                 pbar.set_postfix({'loss(avg)': torch.Tensor(losses).mean().item(), 'acc(avg)': torch.Tensor(accs).mean().item()})
 
-        val_loss, val_accuracy = eval.evaluate(val_loader, model, loss_func)
+        val_loss, val_accuracy = evaluate(val_loader, model, loss_func)
         print(f'検証: loss = {val_loss:.3f}, accuracy = {val_accuracy:.3f}')
 
         if val_loss < val_loss_best:
             print(f"  -> 検証ロスが改善しました ({val_loss_best:.3f} -> {val_loss:.3f})。モデルを保存します。")
             val_loss_best = val_loss
             model_best = model.copy()
-            scheduler.step()
+        
+        scheduler.step()
 
-    test_loss, test_accuracy = eval.evaluate(test_loader, model_best, loss_func)
+    test_loss, test_accuracy = evaluate(test_loader, model_best, loss_func)
     print(f'テスト: loss = {test_loss:.3f}, accuracy = {test_accuracy:.3f}')
 
     torch.save(model_best.state_dict(), SAVE_PATH)

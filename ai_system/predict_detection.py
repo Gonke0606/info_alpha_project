@@ -33,10 +33,10 @@ def predict_on_image(model, image, device, conf_threshold=0.3, nms_threshold=0.5
     return final_boxes, final_scores, final_labels
 
 def main_predict():
-    model_path = '/Users/wakabayashikengo/face_pose_best.pth'
+    model_path = '/Users/wakabayashikengo/info_alpha_submit/ai_system/trained_parameters/YawnAndEye.pth'
     image_path = '/Users/wakabayashikengo/fatigue_detection/test4.png'
-    num_classes = 6
-    class_names = ["Face-up", "Face-down", "Face-Right", "Face-Left", "Face-Straight", "null"]
+    num_classes = 5
+    class_names = ["closed_eye", "closed_mouth", "open_eye", "open_mouth", "wake-drowsy"]
     if torch.backends.mps.is_available(): device = 'mps'
     elif torch.cuda.is_available(): device = 'cuda'
     else: device = 'cpu'

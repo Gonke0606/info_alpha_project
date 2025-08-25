@@ -8,7 +8,7 @@ import torch.nn.functional as F
 
 from models_classification import ResNet18
 
-MODEL_PATH = '/Users/wakabayashikengo/fatigue_detection/emotion.pth'
+MODEL_PATH = '/Users/wakabayashikengo/info_alpha_submit/ai_system/trained_parameters/'
 IMAGE_PATH = '/Users/wakabayashikengo/fatigue_detection/test7.png'
 NUM_CLASSES = 4
 CLASS_NAMES = ['back', 'face', 'side_left', 'side_right']
