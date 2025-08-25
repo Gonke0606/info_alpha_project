@@ -1,0 +1,1 @@
+../../Resources/torchvision/_meta_registrations.py
