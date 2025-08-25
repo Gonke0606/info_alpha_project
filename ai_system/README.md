@@ -1,5 +1,5 @@
 # info_alpha_project
-情報αの課題
+
 models_classification.py：画像分類モデルの定義
 
 learn_classification.py：画像分類モデルの学習
