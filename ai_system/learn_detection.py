@@ -607,6 +607,7 @@ def train_eval():
             for cat in cats:
                 all_class_names.add(cat['name'])
         except Exception as e:
+            pass
 
     global_class_list = sorted(list(all_class_names))
     global_class_map = {name: i for i, name in enumerate(global_class_list)}
